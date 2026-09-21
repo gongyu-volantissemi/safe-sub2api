@@ -2071,8 +2071,14 @@ func setDefaults() {
 		"generativelanguage.googleapis.com",
 		"cloudcode-pa.googleapis.com",
 		"*.openai.azure.com",
-		"api.deepseek.com", // hybrid-mixing: DeepSeek API
-		"openrouter.ai",    // hybrid-mixing: OpenRouter
+		"openrouter.ai",    // hybrid-mixing: OpenRouter (US-based)
+		"api.fireworks.ai", // hybrid-mixing: Fireworks AI (US-based)
+		// DeepSeek API intentionally excluded from the default allowlist —
+		// api.deepseek.com is operated by a mainland-China company and its
+		// own privacy policy discloses PRC-based data storage/processing,
+		// which this fork's operator does not want to route through by
+		// default. Add "api.deepseek.com" back explicitly here if that's
+		// acceptable for your use case.
 	})
 	viper.SetDefault("security.url_allowlist.pricing_hosts", []string{
 		"raw.githubusercontent.com",

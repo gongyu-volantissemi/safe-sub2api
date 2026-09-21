@@ -161,8 +161,12 @@ security:
       - "generativelanguage.googleapis.com"
       - "cloudcode-pa.googleapis.com"
       - "*.openai.azure.com"
-      - "api.deepseek.com" # hybrid-mixing: DeepSeek API
-      - "openrouter.ai"    # hybrid-mixing: OpenRouter
+      - "openrouter.ai"    # hybrid-mixing: OpenRouter (US-based)
+      - "api.fireworks.ai" # hybrid-mixing: Fireworks AI (US-based)
+      # DeepSeek's api.deepseek.com is intentionally NOT in this default list:
+      # it's operated by a mainland-China company whose own privacy policy
+      # discloses PRC-based data storage/processing. Add "api.deepseek.com"
+      # here yourself if that's acceptable for your use case.
     # Allowed hosts for pricing data download
     # 允许下载定价数据的主机列表
     pricing_hosts:
