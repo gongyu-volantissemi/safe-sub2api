@@ -134,11 +134,21 @@ security:
   #   - "True-Client-IP"
   #   - "X-CDN-Client-IP"
   url_allowlist:
+    # This fork ships secure by default (enabled/private-hosts/insecure-http
+    # below differ from upstream sub2api's permissive defaults) — see
+    # FORK_MAINTENANCE.md. Flipping any of these back is a real SSRF /
+    # plaintext-credential risk: the app logs a slog.Warn at startup for
+    # each one left insecure, and the admin dashboard shows a persistent
+    # banner, so it's never silent.
+    #
     # Enable URL allowlist validation (disable to skip all URL checks)
     # 启用 URL 白名单验证（禁用则跳过所有 URL 检查）
-    enabled: false
-    # Allowed upstream hosts for API proxying
-    # 允许代理的上游 API 主机列表
+    enabled: true
+    # Allowed upstream hosts for API proxying. Add any additional
+    # hybrid-mixing provider (self-hosted proxy, etc.) here — otherwise its
+    # requests are rejected once the allowlist is enabled.
+    # 允许代理的上游 API 主机列表。若要接入其他 provider（自建代理等），
+    # 需在此添加对应主机，否则白名单启用后其请求会被拒绝。
     upstream_hosts:
       - "api.openai.com"
       - "api.anthropic.com"
@@ -151,6 +161,8 @@ security:
       - "generativelanguage.googleapis.com"
       - "cloudcode-pa.googleapis.com"
       - "*.openai.azure.com"
+      - "api.deepseek.com" # hybrid-mixing: DeepSeek API
+      - "openrouter.ai"    # hybrid-mixing: OpenRouter
     # Allowed hosts for pricing data download
     # 允许下载定价数据的主机列表
     pricing_hosts:
@@ -158,12 +170,14 @@ security:
     # Allowed hosts for CRS sync (required when using CRS sync)
     # 允许 CRS 同步的主机列表（使用 CRS 同步功能时必须配置）
     crs_hosts: []
-    # Allow localhost/private IPs for upstream/pricing/CRS (use only in trusted networks)
-    # 允许本地/私有 IP 地址用于上游/定价/CRS（仅在可信网络中使用）
-    allow_private_hosts: true
-    # Allow http:// URLs when allowlist is disabled (default: true; set to false to require https)
-    # 白名单禁用时是否允许 http:// URL（默认: true，设为 false 则仅允许 https）
-    allow_insecure_http: true
+    # Allow localhost/private IPs for upstream/pricing/CRS — SSRF risk, use
+    # only in trusted networks (e.g. local dev pointing at 127.0.0.1)
+    # 允许本地/私有 IP 地址用于上游/定价/CRS —— SSRF 风险，仅限可信网络使用
+    allow_private_hosts: false
+    # Allow http:// upstream URLs — credentials/tokens can be sent
+    # unencrypted; set to true only for local/trusted-network testing
+    # 允许 http:// 上游地址 —— 凭据/令牌可能明文传输；仅本地/可信网络测试时启用
+    allow_insecure_http: false
   response_headers:
     # Enable configurable response header filtering (default: true)
     # 启用可配置的响应头过滤（默认启用，过滤上游敏感响应头）
@@ -298,10 +312,7 @@ gateway:
   # 如需保留客户端 system 提示词，请在模板中显式包含 {{ .ExistingInstructions }}。
   # 若省略，则模板输出会完全覆盖它。
   #
-  # Docker users can mount a host file to /app/data/codex-instructions.md.tmpl
-  # and point this field there.
-  # Docker 用户可将宿主机文件挂载到 /app/data/codex-instructions.md.tmpl，
-  # 然后把本字段指向该路径。
+  # Point this field at any path on disk containing your own template file.
   forced_codex_instructions_template_file: ""
   # OpenAI 透传模式是否放行客户端超时头（如 x-stainless-timeout）
   # 默认 false：过滤超时头，降低上游提前断流风险。

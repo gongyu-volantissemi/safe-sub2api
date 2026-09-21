@@ -86,7 +86,7 @@ func RegisterAdminRoutes(
 		registerOpsRoutes(admin, h)
 
 		// 系统管理
-		registerSystemRoutes(admin, h)
+		registerSystemRoutes(admin, h, stepUpAuth)
 
 		// 订阅管理
 		registerSubscriptionRoutes(admin, h)
@@ -657,15 +657,17 @@ func registerBackupRoutes(admin *gin.RouterGroup, h *handler.Handlers, stepUpAut
 	}
 }
 
-func registerSystemRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
+// This fork removes upstream's binary self-update/rollback routes (they
+// downloaded and swapped the running binary from GitHub Releases, which is
+// incompatible with build-from-source-only) — see FORK_MAINTENANCE.md.
+func registerSystemRoutes(admin *gin.RouterGroup, h *handler.Handlers, stepUpAuth middleware.StepUpAuthMiddleware) {
 	system := admin.Group("/system")
 	{
 		system.GET("/version", h.Admin.System.GetVersion)
-		system.GET("/check-updates", h.Admin.System.CheckUpdates)
-		system.GET("/rollback-versions", h.Admin.System.GetRollbackVersions)
-		system.POST("/update", h.Admin.System.PerformUpdate)
-		system.POST("/rollback", h.Admin.System.Rollback)
-		system.POST("/restart", h.Admin.System.RestartService)
+		// Restarting the service (e.g. after a rebuild) is a real operational
+		// action, not a read — require step-up 2FA like other sensitive admin
+		// routes.
+		system.POST("/restart", gin.HandlerFunc(stepUpAuth), h.Admin.System.RestartService)
 	}
 }
 

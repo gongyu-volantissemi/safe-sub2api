@@ -42,9 +42,11 @@ func ProvidePricingService(cfg *config.Config, remoteClient PricingRemoteClient)
 	return svc, nil
 }
 
-// ProvideUpdateService creates UpdateService with BuildInfo
-func ProvideUpdateService(cache UpdateCache, githubClient GitHubReleaseClient, buildInfo BuildInfo) *UpdateService {
-	return NewUpdateService(cache, githubClient, buildInfo.Version, buildInfo.BuildType)
+// ProvideUpdateService creates UpdateService with BuildInfo.
+// This fork's UpdateService only reports version/security-config state — see
+// FORK_MAINTENANCE.md for why the GitHub-release-backed self-update path was removed.
+func ProvideUpdateService(cfg *config.Config, buildInfo BuildInfo) *UpdateService {
+	return NewUpdateService(buildInfo.Version, cfg)
 }
 
 // ProvideEmailQueueService creates EmailQueueService with default worker count

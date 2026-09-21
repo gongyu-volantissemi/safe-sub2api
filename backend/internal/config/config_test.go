@@ -799,6 +799,9 @@ func TestLoadForcedCodexInstructionsTemplate(t *testing.T) {
 	require.Equal(t, "server-prefix\n\n{{ .ExistingInstructions }}", cfg.Gateway.ForcedCodexInstructionsTemplate)
 }
 
+// This fork ships secure-by-default security.url_allowlist settings,
+// unlike upstream sub2api's opt-in-on-top-of-opt-in defaults — see
+// FORK_MAINTENANCE.md.
 func TestLoadDefaultSecurityToggles(t *testing.T) {
 	resetViperWithJWTSecret(t)
 
@@ -807,14 +810,14 @@ func TestLoadDefaultSecurityToggles(t *testing.T) {
 		t.Fatalf("Load() error: %v", err)
 	}
 
-	if cfg.Security.URLAllowlist.Enabled {
-		t.Fatalf("URLAllowlist.Enabled = true, want false")
+	if !cfg.Security.URLAllowlist.Enabled {
+		t.Fatalf("URLAllowlist.Enabled = false, want true")
 	}
-	if !cfg.Security.URLAllowlist.AllowInsecureHTTP {
-		t.Fatalf("URLAllowlist.AllowInsecureHTTP = false, want true")
+	if cfg.Security.URLAllowlist.AllowInsecureHTTP {
+		t.Fatalf("URLAllowlist.AllowInsecureHTTP = true, want false")
 	}
-	if !cfg.Security.URLAllowlist.AllowPrivateHosts {
-		t.Fatalf("URLAllowlist.AllowPrivateHosts = false, want true")
+	if cfg.Security.URLAllowlist.AllowPrivateHosts {
+		t.Fatalf("URLAllowlist.AllowPrivateHosts = true, want false")
 	}
 	if !cfg.Security.ResponseHeaders.Enabled {
 		t.Fatalf("ResponseHeaders.Enabled = false, want true")
@@ -824,6 +827,8 @@ func TestLoadDefaultSecurityToggles(t *testing.T) {
 		"api.kimi.com",
 		"api.moonshot.ai",
 		"api.moonshot.cn",
+		"api.deepseek.com",
+		"openrouter.ai",
 	}
 	hostSet := make(map[string]struct{}, len(cfg.Security.URLAllowlist.UpstreamHosts))
 	for _, h := range cfg.Security.URLAllowlist.UpstreamHosts {

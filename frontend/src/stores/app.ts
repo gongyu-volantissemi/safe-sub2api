@@ -7,11 +7,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Toast, ToastType, PublicSettings } from '@/types'
 import { i18n } from '@/i18n'
-import {
-  checkUpdates as checkUpdatesAPI,
-  type VersionInfo,
-  type ReleaseInfo
-} from '@/api/admin/system'
+import { getVersion as getVersionAPI, type VersionInfo } from '@/api/admin/system'
 import { getPublicSettings as fetchPublicSettingsAPI } from '@/api/auth'
 
 export const useAppStore = defineStore('app', () => {
@@ -39,10 +35,9 @@ export const useAppStore = defineStore('app', () => {
   const versionLoaded = ref<boolean>(false)
   const versionLoading = ref<boolean>(false)
   const currentVersion = ref<string>('')
-  const latestVersion = ref<string>('')
-  const hasUpdate = ref<boolean>(false)
-  const buildType = ref<string>('source')
-  const releaseInfo = ref<ReleaseInfo | null>(null)
+  // Active insecure-config warnings (see security.url_allowlist in
+  // FORK_MAINTENANCE.md) — empty when the instance is running secure defaults.
+  const securityWarnings = ref<string[]>([])
 
   // Auto-incrementing ID for toasts
   let toastIdCounter = 0
@@ -244,12 +239,8 @@ export const useAppStore = defineStore('app', () => {
     // Return cached data if available and not forcing refresh
     if (versionLoaded.value && !force) {
       return {
-        current_version: currentVersion.value,
-        latest_version: latestVersion.value,
-        has_update: hasUpdate.value,
-        build_type: buildType.value,
-        release_info: releaseInfo.value || undefined,
-        cached: true
+        version: currentVersion.value,
+        security_warnings: securityWarnings.value
       }
     }
 
@@ -260,12 +251,9 @@ export const useAppStore = defineStore('app', () => {
 
     versionLoading.value = true
     try {
-      const data = await checkUpdatesAPI(force)
-      currentVersion.value = data.current_version
-      latestVersion.value = data.latest_version
-      hasUpdate.value = data.has_update
-      buildType.value = data.build_type || 'source'
-      releaseInfo.value = data.release_info || null
+      const data = await getVersionAPI()
+      currentVersion.value = data.version
+      securityWarnings.value = data.security_warnings || []
       versionLoaded.value = true
       return data
     } catch (error) {
@@ -274,14 +262,6 @@ export const useAppStore = defineStore('app', () => {
     } finally {
       versionLoading.value = false
     }
-  }
-
-  /**
-   * Clear version cache (e.g., after update)
-   */
-  function clearVersionCache(): void {
-    versionLoaded.value = false
-    hasUpdate.value = false
   }
 
   // ==================== Public Settings Management ====================
@@ -458,10 +438,7 @@ export const useAppStore = defineStore('app', () => {
     versionLoaded,
     versionLoading,
     currentVersion,
-    latestVersion,
-    hasUpdate,
-    buildType,
-    releaseInfo,
+    securityWarnings,
 
     // Computed
     hasActiveToasts,
@@ -486,7 +463,6 @@ export const useAppStore = defineStore('app', () => {
 
     // Version actions
     fetchVersion,
-    clearVersionCache,
 
     // Public settings actions
     fetchPublicSettings,
