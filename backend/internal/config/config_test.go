@@ -824,15 +824,25 @@ func TestLoadDefaultSecurityToggles(t *testing.T) {
 	}
 
 	wantHosts := []string{
-		"api.kimi.com",
-		"api.moonshot.ai",
-		"api.moonshot.cn",
+		"api.openai.com",
+		"api.anthropic.com",
 		"openrouter.ai",
 		"api.fireworks.ai",
 	}
+	unwantedChinaHosts := []string{
+		"api.deepseek.com",
+		"api.kimi.com",
+		"api.moonshot.ai",
+		"api.moonshot.cn",
+		"open.bigmodel.cn",
+		"api.minimaxi.com",
+		"api.minimax.io",
+	}
 	for _, h := range cfg.Security.URLAllowlist.UpstreamHosts {
-		if h == "api.deepseek.com" {
-			t.Fatalf("UpstreamHosts must not include api.deepseek.com by default (excluded intentionally, see FORK_MAINTENANCE.md)")
+		for _, unwanted := range unwantedChinaHosts {
+			if h == unwanted {
+				t.Fatalf("UpstreamHosts must not include %s by default (mainland-China-operated provider, excluded intentionally, see FORK_MAINTENANCE.md)", unwanted)
+			}
 		}
 	}
 	hostSet := make(map[string]struct{}, len(cfg.Security.URLAllowlist.UpstreamHosts))

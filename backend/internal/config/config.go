@@ -2061,24 +2061,23 @@ func setDefaults() {
 	viper.SetDefault("security.url_allowlist.upstream_hosts", []string{
 		"api.openai.com",
 		"api.anthropic.com",
-		"api.kimi.com",
-		"api.moonshot.ai",
-		"api.moonshot.cn",
-		"open.bigmodel.cn",
-		"api.minimaxi.com", // MiniMax CN quota + inference
-		"api.minimax.io",   // MiniMax intl; frozen allowlists must add this host to use the intl site
 		"opencode.ai",
 		"generativelanguage.googleapis.com",
 		"cloudcode-pa.googleapis.com",
 		"*.openai.azure.com",
 		"openrouter.ai",    // hybrid-mixing: OpenRouter (US-based)
 		"api.fireworks.ai", // hybrid-mixing: Fireworks AI (US-based)
-		// DeepSeek API intentionally excluded from the default allowlist —
-		// api.deepseek.com is operated by a mainland-China company and its
-		// own privacy policy discloses PRC-based data storage/processing,
-		// which this fork's operator does not want to route through by
-		// default. Add "api.deepseek.com" back explicitly here if that's
-		// acceptable for your use case.
+		// This fork's operator does not want mainland-China-operated
+		// providers in the default outbound allowlist (their own privacy
+		// policies disclose PRC-based data storage/processing), so unlike
+		// upstream sub2api, none of the following are included by default:
+		//   - api.deepseek.com (DeepSeek)
+		//   - api.kimi.com / api.moonshot.ai / api.moonshot.cn (Moonshot AI / Kimi)
+		//   - open.bigmodel.cn (Zhipu AI / GLM)
+		//   - api.minimaxi.com / api.minimax.io (MiniMax)
+		// The Kimi/Zhipu/MiniMax/DeepSeek platform integrations themselves
+		// are untouched — add any of these hosts back explicitly in your own
+		// config.yaml if you want to use them.
 	})
 	viper.SetDefault("security.url_allowlist.pricing_hosts", []string{
 		"raw.githubusercontent.com",

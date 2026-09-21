@@ -152,21 +152,22 @@ security:
     upstream_hosts:
       - "api.openai.com"
       - "api.anthropic.com"
-      - "api.kimi.com"
-      - "api.moonshot.ai"
-      - "api.moonshot.cn"
-      - "open.bigmodel.cn"
-      - "api.minimaxi.com"
       - "opencode.ai"
       - "generativelanguage.googleapis.com"
       - "cloudcode-pa.googleapis.com"
       - "*.openai.azure.com"
       - "openrouter.ai"    # hybrid-mixing: OpenRouter (US-based)
       - "api.fireworks.ai" # hybrid-mixing: Fireworks AI (US-based)
-      # DeepSeek's api.deepseek.com is intentionally NOT in this default list:
-      # it's operated by a mainland-China company whose own privacy policy
-      # discloses PRC-based data storage/processing. Add "api.deepseek.com"
-      # here yourself if that's acceptable for your use case.
+      # This fork's operator does not want mainland-China-operated providers
+      # in the default outbound allowlist (their own privacy policies
+      # disclose PRC-based data storage/processing), so unlike upstream
+      # sub2api, none of the following are included by default:
+      #   - api.deepseek.com (DeepSeek)
+      #   - api.kimi.com / api.moonshot.ai / api.moonshot.cn (Moonshot AI / Kimi)
+      #   - open.bigmodel.cn (Zhipu AI / GLM)
+      #   - api.minimaxi.com / api.minimax.io (MiniMax)
+      # The platform integrations themselves are untouched — add any of
+      # these hosts back here yourself if you want to use them.
     # Allowed hosts for pricing data download
     # 允许下载定价数据的主机列表
     pricing_hosts:
