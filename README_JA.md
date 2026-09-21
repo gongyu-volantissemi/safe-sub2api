@@ -317,13 +317,13 @@ SECURITY_FORWARDED_CLIENT_IP_HEADERS=True-Client-IP,X-CDN-Client-IP
 
 **⚠️ セキュリティ警告: HTTP URL 設定**
 
-`security.url_allowlist.enabled=false` の場合、システムは最小限の URL バリデーションのみを行い、**デフォルトで HTTP URL を許可**します（開発フレンドリーモード。Docker Compose デプロイのデフォルトも同じです）。本番環境では、以下のように明示的に HTTPS のみに制限することを推奨します:
+本 fork はデフォルトで安全側の設定を採用しています: `security.url_allowlist.enabled` はデフォルトで `true`、`allow_insecure_http`/`allow_private_hosts` はいずれもデフォルトで `false` です（アップストリームの sub2api とは異なるデフォルト値です。理由は [`FORK_MAINTENANCE.md`](FORK_MAINTENANCE.md) を参照）。ローカル/信頼できるネットワーク用途で許可リストを明示的に無効化しても、`allow_insecure_http` が自動的に緩くなることはありません——明示的に変更しない限り `false` のままです。いずれかのフラグが安全でない状態になっている間は、起動時に `slog.Warn` が記録され、管理画面にも常時警告バナーが表示されるため、気づかないまま運用されることはありません:
 
 ```yaml
 security:
   url_allowlist:
-    enabled: false                # 許可リストチェックを無効化
-    allow_insecure_http: false    # HTTPS のみ許可（本番環境推奨）
+    enabled: false                # 許可リストチェックを無効化（デフォルト: true）
+    allow_insecure_http: false    # HTTPS のみ許可（デフォルト値。本番環境推奨）
 ```
 
 **または環境変数で設定:**

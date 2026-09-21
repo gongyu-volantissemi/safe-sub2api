@@ -350,13 +350,13 @@ SECURITY_FORWARDED_CLIENT_IP_HEADERS=True-Client-IP,X-CDN-Client-IP
 
 **⚠️ 安全警告：HTTP URL 配置**
 
-当 `security.url_allowlist.enabled=false` 时，系统仅执行最小 URL 校验，且**默认允许 HTTP URL**（开发友好模式，Docker Compose 部署的默认值一致）。生产环境建议显式收紧为仅允许 HTTPS：
+本 fork 默认采用安全配置：`security.url_allowlist.enabled` 默认为 `true`，`allow_insecure_http`/`allow_private_hosts` 均默认为 `false`（与上游 sub2api 的默认值不同，原因见 [`FORK_MAINTENANCE.md`](FORK_MAINTENANCE.md)）。若你为本地/可信网络场景显式禁用白名单，`allow_insecure_http` **不会**因此自动变宽松——它仍保持 `false`，除非你也显式修改；只要任一项处于不安全状态，启动时会记录 `slog.Warn`，管理后台也会常驻显示警告横幅，不会静默发生：
 
 ```yaml
 security:
   url_allowlist:
-    enabled: false                # 禁用白名单检查
-    allow_insecure_http: false    # 仅允许 HTTPS（生产环境推荐）
+    enabled: false                # 禁用白名单检查（默认：true）
+    allow_insecure_http: false    # 仅允许 HTTPS（默认值；生产环境推荐）
 ```
 
 **或通过环境变量：**
@@ -463,7 +463,7 @@ go generate ./cmd/server
 
 支持 `gpt-image-2.5-flare`、`gpt-image-2.5-sunburst` 及其 `2026-09-08` 日期快照，可通过 `/v1/images/generations`、`/v1/images/edits` 调用。`quality` 支持 `xhigh`、`max`、`auto`，合法自定义尺寸和图片 usage 明细保持透传。
 
-OAuth / Setup Token 图片请求使用 Responses 主控模型调用 `image_generation` 工具，默认主控为 `gpt-5.6-luna`。可设置 `SUB2API_IMAGES_MAIN_MODEL` 切换为账号支持的文本模型；Docker Compose 用户修改 `.env` 后执行 `docker compose up -d` 重建容器。该配置不会替换所选图片模型，也不会覆盖 `/v1/responses` 请求中已经提供的文本主控模型。
+OAuth / Setup Token 图片请求使用 Responses 主控模型调用 `image_generation` 工具，默认主控为 `gpt-5.6-luna`。可设置 `SUB2API_IMAGES_MAIN_MODEL` 环境变量切换为账号支持的文本模型，修改后重启服务生效。该配置不会替换所选图片模型，也不会覆盖 `/v1/responses` 请求中已经提供的文本主控模型。
 
 升级后，无模型限制的账号自动支持新模型。已有显式账号映射或分组白名单需要加入两个 2.5 模型（日期快照按需加入）；升级不会自动扩大管理员设置的模型权限。新模型内置价格包含官方文本输入、图片输入和图片输出 token 费率，远端价格表尚未更新时使用内置 2.5 价格；实际按次或按 token 计费仍由既有分组/渠道配置决定。
 

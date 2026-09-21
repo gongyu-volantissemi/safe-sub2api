@@ -317,13 +317,20 @@ Header names are validated, canonicalized, and de-duplicated. The admin security
 
 **⚠️ Security Warning: HTTP URL Configuration**
 
-When `security.url_allowlist.enabled=false`, the system performs minimal URL validation and **allows HTTP URLs by default** (dev-friendly mode; Docker Compose deployments use the same default). For production, explicitly tighten this to HTTPS-only:
+This fork ships secure by default: `security.url_allowlist.enabled` defaults to
+`true`, and `allow_insecure_http`/`allow_private_hosts` both default to `false`
+(see [`FORK_MAINTENANCE.md`](FORK_MAINTENANCE.md) for why this differs from
+upstream sub2api). If you explicitly disable the allowlist for local/trusted-
+network use, `allow_insecure_http` does **not** get any more permissive on its
+own — it stays `false` unless you also flip it, and the app logs a
+`slog.Warn` at startup plus a persistent admin-dashboard banner for either
+flag left insecure, so it's never silent:
 
 ```yaml
 security:
   url_allowlist:
-    enabled: false                # Disable allowlist checks
-    allow_insecure_http: false    # HTTPS only (recommended for production)
+    enabled: false                # Disable allowlist checks (default: true)
+    allow_insecure_http: false    # HTTPS only (default; recommended for production)
 ```
 
 **Or via environment variable:**
