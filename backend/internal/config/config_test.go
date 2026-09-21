@@ -884,6 +884,10 @@ func TestLoadJWTAccessTokenExpireMinutesFromEnv(t *testing.T) {
 	}
 }
 
+// "prefer" is not actually safe as a default: the migration-lock connection
+// uses the pq driver directly, which rejects it outright rather than
+// falling back to plaintext, breaking startup against any local Postgres
+// without SSL configured.
 func TestLoadDefaultDatabaseSSLMode(t *testing.T) {
 	resetViperWithJWTSecret(t)
 
@@ -892,8 +896,8 @@ func TestLoadDefaultDatabaseSSLMode(t *testing.T) {
 		t.Fatalf("Load() error: %v", err)
 	}
 
-	if cfg.Database.SSLMode != "prefer" {
-		t.Fatalf("Database.SSLMode = %q, want %q", cfg.Database.SSLMode, "prefer")
+	if cfg.Database.SSLMode != "disable" {
+		t.Fatalf("Database.SSLMode = %q, want %q", cfg.Database.SSLMode, "disable")
 	}
 }
 

@@ -852,9 +852,21 @@ database:
   # 数据库名称
   dbname: "sub2api"
   # SSL mode: disable, prefer, require, verify-ca, verify-full
-  # SSL 模式：disable（禁用）, prefer（优先加密，默认）, require（要求）, verify-ca（验证CA）, verify-full（完全验证）
-  # 默认值为 "prefer"，数据库支持 SSL 时自动使用加密连接，不支持时回退明文
-  sslmode: "prefer"
+  # SSL 模式：disable（禁用）, prefer（优先加密）, require（要求）, verify-ca（验证CA）, verify-full（完全验证）
+  #
+  # Default is "disable" here because a freshly built-from-source local
+  # Postgres has no SSL configured, and "prefer" is NOT actually safe to use:
+  # the migration-lock connection uses the pq driver directly, which rejects
+  # "prefer" outright ("unsupported sslmode 'prefer'; only 'require' (default),
+  # 'verify-full', 'verify-ca', and 'disable' supported") instead of the
+  # graceful plaintext fallback its name implies — so the app fails to start.
+  # If your Postgres has SSL configured, set this to "require" or stronger.
+  #
+  # 默认值为 "disable"：源码构建后本地 Postgres 通常未配置 SSL，而 "prefer" 并不像
+  # 名字暗示的那样安全可用——迁移锁连接直接使用 pq 驱动，该驱动会直接拒绝
+  # "prefer"（报错 "unsupported sslmode 'prefer'..."），而不是优雅降级为明文连接，
+  # 导致应用无法启动。如果你的 Postgres 已配置 SSL，请设置为 "require" 或更高级别。
+  sslmode: "disable"
   # Max open connections (高并发场景建议 256+，需配合 PostgreSQL max_connections 调整)
   # 最大打开连接数
   max_open_conns: 256

@@ -2180,7 +2180,13 @@ func setDefaults() {
 	viper.SetDefault("database.user", "postgres")
 	viper.SetDefault("database.password", "postgres")
 	viper.SetDefault("database.dbname", "sub2api")
-	viper.SetDefault("database.sslmode", "prefer")
+	// "prefer" is NOT a safe default here: the migration-lock connection uses
+	// the pq driver directly, which rejects "prefer" outright instead of the
+	// graceful plaintext fallback its name implies, so the app fails to start
+	// against any local Postgres without SSL configured (the common case for
+	// a fresh build-from-source install). Use "require"+ if your Postgres has
+	// SSL configured.
+	viper.SetDefault("database.sslmode", "disable")
 	viper.SetDefault("database.max_open_conns", 256)
 	viper.SetDefault("database.max_idle_conns", 128)
 	viper.SetDefault("database.conn_max_lifetime_minutes", 30)
