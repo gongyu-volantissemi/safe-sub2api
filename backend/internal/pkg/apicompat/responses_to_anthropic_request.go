@@ -3,7 +3,10 @@ package apicompat
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
+
+	"github.com/Wei-Shaw/sub2api/internal/pkg/claude"
 )
 
 // ResponsesToAnthropicRequest converts a Responses API request into an
@@ -53,15 +56,21 @@ func ResponsesToAnthropicRequest(req *ResponsesRequest) (*AnthropicRequest, erro
 
 	// reasoning.effort → output_config.effort + thinking
 	if req.Reasoning != nil && req.Reasoning.Effort != "" {
-		effort := mapResponsesEffortToAnthropic(req.Reasoning.Effort)
-		out.OutputConfig = &AnthropicOutputConfig{Effort: effort}
-		// Enable thinking for non-low efforts
-		if effort != "low" {
-			out.Thinking = &AnthropicThinking{
-				Type:         "enabled",
-				BudgetTokens: defaultThinkingBudget(effort),
+		if effort, ok := mapResponsesEffortToAnthropic(req.Reasoning.Effort, req.Model); ok {
+			out.OutputConfig = &AnthropicOutputConfig{Effort: effort}
+			// Enable thinking for non-low efforts
+			if effort != "low" {
+				out.Thinking = &AnthropicThinking{
+					Type:         "enabled",
+					BudgetTokens: defaultThinkingBudget(effort),
+				}
 			}
 		}
+		// else: the requested effort isn't one Claude's output_config.effort
+		// enum (or this specific model) accepts — e.g. Codex CLI's interactive
+		// /model picker is known to carry a stale model_reasoning_effort value
+		// over across a model switch. Drop it instead of forwarding a value
+		// that would make Claude's API reject the whole request outright.
 	}
 
 	return out, nil
@@ -83,18 +92,33 @@ func defaultThinkingBudget(effort string) int {
 	}
 }
 
-// mapResponsesEffortToAnthropic converts OpenAI Responses reasoning effort to
-// Anthropic effort levels. Reverse of mapAnthropicEffortToResponses.
+// mapResponsesEffortToAnthropic converts an OpenAI Responses reasoning effort
+// into an Anthropic output_config.effort value, validating it against
+// Claude's actual enum (low/medium/high/xhigh/max) and, when the model is
+// recognized, against that model family's own accepted levels
+// (claude.EffortLevelsForModel). Anything else is rejected (ok=false) rather
+// than forwarded — Claude's native API only accepts those five values and
+// rejects the whole request otherwise, and some models don't support all of
+// them (see internal/pkg/claude/effort_catalog.go).
 //
 //	low    → low
 //	medium → medium
 //	high   → high
 //	xhigh  → max
-func mapResponsesEffortToAnthropic(effort string) string {
-	if effort == "xhigh" {
-		return "max"
+func mapResponsesEffortToAnthropic(effort, model string) (string, bool) {
+	normalized := strings.ToLower(strings.TrimSpace(effort))
+	if normalized == "xhigh" {
+		normalized = "max"
 	}
-	return effort // low→low, medium→medium, high→high, unknown→passthrough
+	switch normalized {
+	case "low", "medium", "high", "max":
+	default:
+		return "", false
+	}
+	if levels := claude.EffortLevelsForModel(model); len(levels) > 0 && !slices.Contains(levels, normalized) {
+		return "", false
+	}
+	return normalized, true
 }
 
 // convertResponsesInputToAnthropic extracts system prompt and messages from
