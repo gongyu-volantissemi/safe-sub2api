@@ -75,6 +75,15 @@ func (s *OpenAIGatewayService) forwardResponsesViaRawChatCompletions(
 	// 国产模型默认 effort 补充：需要 mappedModel 判定，推迟到 billingModel 算出之后。
 	reasoningEffort = ApplyThinkingEnabledFallback(reasoningEffort, body, billingModel)
 	chatReq.Model = upstreamModel
+	// ResponsesToChatCompletionsRequestWithOptions doesn't carry reasoning.effort
+	// over to ChatCompletionsRequest.ReasoningEffort -- without this, the
+	// client's requested effort was silently dropped from the outbound body
+	// (only ever used for usage-log billing metadata above), so upstreams that
+	// do honor reasoning_effort on their chat/completions endpoint (Fireworks-
+	// hosted models, OpenRouter, etc.) never actually saw it.
+	if reasoningEffort != nil {
+		chatReq.ReasoningEffort = *reasoningEffort
+	}
 	if clientStream {
 		chatReq.StreamOptions = &apicompat.ChatStreamOptions{IncludeUsage: true}
 	}
