@@ -710,6 +710,14 @@ const (
 	// SettingKeyOpenAIAllowClaudeCodeCodexPlugin 已废弃：历史全局开关只作为升级迁移输入读取。
 	// 迁移后等价规则写入 SettingKeyCodexCLIOnlyWhitelist，不再参与运行时判定。
 	SettingKeyOpenAIAllowClaudeCodeCodexPlugin = "openai_allow_claude_code_codex_plugin"
+	// SettingKeyClaudeCLIClientVersionSynced 自动同步任务写入的官方 Claude Code CLI 最新
+	// 稳定版版本号。由 ClaudeCLIVersionSyncService 独占写入；SUB2API_CLAUDE_CLI_VERSION
+	// 环境变量存在时优先于本值（见 claude.SetVersionOverride 与其调用点）。目前没有面板 UI，
+	// 只读展示留待需要时再补。
+	SettingKeyClaudeCLIClientVersionSynced = "claude_cli_client_version_synced"
+	// SettingKeyClaudeCLIVersionAutoSyncEnabled 是否启用 Claude Code CLI 版本号自动同步
+	// （默认 true）。目前没有面板 UI，需要关闭时直接写这个 setting key 为 "false"。
+	SettingKeyClaudeCLIVersionAutoSyncEnabled = "claude_cli_version_auto_sync_enabled"
 
 	// 余额不足提醒
 	SettingKeyBalanceLowNotifyEnabled     = "balance_low_notify_enabled"      // 全局开关

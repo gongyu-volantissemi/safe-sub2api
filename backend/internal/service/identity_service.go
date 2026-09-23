@@ -92,7 +92,7 @@ func isAcceptableFingerprintUserAgent(ua string) bool {
 //   - 只对 claude-cli 产品生效，其它产品一律不动，避免误伤别的合法客户端；
 //   - 只升不降：版本等于或高于 CLICurrentVersion（含客户端上报的更新版本）时不做任何改动；
 //   - 只替换 claude-cli/ 后的版本号段，UA 其余部分（如 "(external, claude-desktop-3p,
-//     agent-sdk/0.3.100)"）原样保留，不重建整个字符串、不退化为 defaultFingerprint.UserAgent；
+//     agent-sdk/0.3.100)"）原样保留，不重建整个字符串、不退化为 defaultFingerprintValue().UserAgent；
 //   - X-Stainless-* 字段不在此处理，维持调用方的既有 merge 语义。
 func floorClaudeCLIUserAgentVersion(ua string) (string, bool) {
 	if extractProduct(ua) != claudeCLIUserAgentProduct {
@@ -111,15 +111,21 @@ func floorClaudeCLIUserAgentVersion(ua string) (string, bool) {
 	return floored, true
 }
 
-// 默认指纹值（当客户端未提供时使用）
-var defaultFingerprint = Fingerprint{
-	UserAgent:               "claude-cli/" + claude.CLIVersion() + " (external, cli)",
-	StainlessLang:           "js",
-	StainlessPackageVersion: "0.94.0",
-	StainlessOS:             "Linux",
-	StainlessArch:           "arm64",
-	StainlessRuntime:        "node",
-	StainlessRuntimeVersion: "v24.3.0",
+// defaultFingerprintValue 返回默认指纹（当客户端未提供时使用）。
+//
+// 是函数而不是包级 var：claude.CLIVersion() 的值可能在本包自己的 init 跑完之后，由
+// ClaudeCLIVersionSyncService 在启动阶段通过 claude.SetVersionOverride 再次刷新——
+// 若这里仍是包级 var，字面量会在覆盖生效前就把旧版本号固化进去。
+func defaultFingerprintValue() Fingerprint {
+	return Fingerprint{
+		UserAgent:               "claude-cli/" + claude.CLIVersion() + " (external, cli)",
+		StainlessLang:           "js",
+		StainlessPackageVersion: "0.94.0",
+		StainlessOS:             "Linux",
+		StainlessArch:           "arm64",
+		StainlessRuntime:        "node",
+		StainlessRuntimeVersion: "v24.3.0",
+	}
 }
 
 // Fingerprint represents account fingerprint data
@@ -187,7 +193,7 @@ func (s *IdentityService) GetOrCreateFingerprint(ctx context.Context, accountID 
 			if uaAcceptable {
 				mergeHeadersIntoFingerprint(cached, headers)
 			} else {
-				cached.UserAgent = defaultFingerprint.UserAgent
+				cached.UserAgent = defaultFingerprintValue().UserAgent
 			}
 			needWrite = true
 			logger.LegacyPrintf("service.identity",
@@ -257,6 +263,7 @@ func (s *IdentityService) GetOrCreateFingerprint(ctx context.Context, accountID 
 // createFingerprintFromHeaders 从请求头创建指纹
 func (s *IdentityService) createFingerprintFromHeaders(headers http.Header) *Fingerprint {
 	fp := &Fingerprint{}
+	defaults := defaultFingerprintValue()
 
 	// 获取User-Agent：只接受形态合法且版本合理的值，否则回退默认指纹。
 	// 首次创建同样是持久化写入，必须与升级路径共用同一套校验。
@@ -265,16 +272,16 @@ func (s *IdentityService) createFingerprintFromHeaders(headers http.Header) *Fin
 		// 落库时同样不能低于 CLICurrentVersion，否则新账号一开始就带着过旧的持久身份。
 		fp.UserAgent, _ = floorClaudeCLIUserAgentVersion(ua)
 	} else {
-		fp.UserAgent = defaultFingerprint.UserAgent
+		fp.UserAgent = defaults.UserAgent
 	}
 
 	// 获取x-stainless-*头，如果没有则使用默认值
-	fp.StainlessLang = getHeaderOrDefault(headers, "X-Stainless-Lang", defaultFingerprint.StainlessLang)
-	fp.StainlessPackageVersion = getHeaderOrDefault(headers, "X-Stainless-Package-Version", defaultFingerprint.StainlessPackageVersion)
-	fp.StainlessOS = getHeaderOrDefault(headers, "X-Stainless-OS", defaultFingerprint.StainlessOS)
-	fp.StainlessArch = getHeaderOrDefault(headers, "X-Stainless-Arch", defaultFingerprint.StainlessArch)
-	fp.StainlessRuntime = getHeaderOrDefault(headers, "X-Stainless-Runtime", defaultFingerprint.StainlessRuntime)
-	fp.StainlessRuntimeVersion = getHeaderOrDefault(headers, "X-Stainless-Runtime-Version", defaultFingerprint.StainlessRuntimeVersion)
+	fp.StainlessLang = getHeaderOrDefault(headers, "X-Stainless-Lang", defaults.StainlessLang)
+	fp.StainlessPackageVersion = getHeaderOrDefault(headers, "X-Stainless-Package-Version", defaults.StainlessPackageVersion)
+	fp.StainlessOS = getHeaderOrDefault(headers, "X-Stainless-OS", defaults.StainlessOS)
+	fp.StainlessArch = getHeaderOrDefault(headers, "X-Stainless-Arch", defaults.StainlessArch)
+	fp.StainlessRuntime = getHeaderOrDefault(headers, "X-Stainless-Runtime", defaults.StainlessRuntime)
+	fp.StainlessRuntimeVersion = getHeaderOrDefault(headers, "X-Stainless-Runtime-Version", defaults.StainlessRuntimeVersion)
 
 	return fp
 }

@@ -1,6 +1,11 @@
 package claude
 
-import "testing"
+import (
+	"os"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
 
 func TestIsSupportedCLIVersion(t *testing.T) {
 	cases := []struct {
@@ -60,8 +65,8 @@ func TestResolveCLIVersion(t *testing.T) {
 // 两者由不同代码路径写入同一个请求，不一致会被上游判为非正版客户端。
 func TestDefaultHeadersUserAgentMatchesCLIVersion(t *testing.T) {
 	want := "claude-cli/" + CLIVersion() + " (external, cli)"
-	if got := DefaultHeaders["User-Agent"]; got != want {
-		t.Fatalf("DefaultHeaders[User-Agent] = %q, want %q", got, want)
+	if got := DefaultHeaders()["User-Agent"]; got != want {
+		t.Fatalf("DefaultHeaders()[User-Agent] = %q, want %q", got, want)
 	}
 }
 
@@ -70,4 +75,38 @@ func TestCLIVersionDefaultsToBuiltinPin(t *testing.T) {
 	if got := CLIVersion(); got != CLICurrentVersion {
 		t.Fatalf("CLIVersion() = %q, want built-in pin %q (测试进程未设置 %s)", got, CLICurrentVersion, CLIVersionEnv)
 	}
+}
+
+// SetVersionOverride 是 ClaudeCLIVersionSyncService 在启动阶段应用自动发现版本的入口，
+// 必须遵守与 resolveCLIVersion 相同的校验（拒绝非法/向下覆盖），且绝不覆盖一个已生效的
+// 显式环境变量——运维手工设置的版本永远优先于自动发现的值。
+func TestSetVersionOverride(t *testing.T) {
+	t.Cleanup(func() { resolvedCLIVersion = resolveCLIVersion(os.Getenv(CLIVersionEnv)) })
+
+	t.Run("合法覆盖生效", func(t *testing.T) {
+		resolvedCLIVersion = CLICurrentVersion
+		SetVersionOverride("2.1.280")
+		require.Equal(t, "2.1.280", CLIVersion())
+	})
+
+	t.Run("非法值被拒绝", func(t *testing.T) {
+		resolvedCLIVersion = CLICurrentVersion
+		SetVersionOverride("not-a-version")
+		require.Equal(t, CLICurrentVersion, CLIVersion())
+	})
+
+	t.Run("向下覆盖被拒绝", func(t *testing.T) {
+		resolvedCLIVersion = CLICurrentVersion
+		SetVersionOverride("2.0.0")
+		require.Equal(t, CLICurrentVersion, CLIVersion())
+	})
+
+	t.Run("已设置的环境变量优先于自动发现的值", func(t *testing.T) {
+		t.Setenv(CLIVersionEnv, "2.1.300")
+		resolvedCLIVersion = resolveCLIVersion(os.Getenv(CLIVersionEnv))
+		require.Equal(t, "2.1.300", CLIVersion())
+
+		SetVersionOverride("2.1.280") // 更新但仍高于基线的自动发现值
+		require.Equal(t, "2.1.300", CLIVersion(), "显式环境变量不应被自动发现的值替换")
+	})
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/payment"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/antigravity"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/claude"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
 	"github.com/google/wire"
@@ -412,6 +413,27 @@ func ProvideOpenAICodexVersionSyncService(
 	githubClient GitHubReleaseClient,
 ) *OpenAICodexVersionSyncService {
 	svc := NewOpenAICodexVersionSyncService(settingRepo, settingService, githubClient, openAICodexVersionSyncInterval)
+	svc.Start()
+	return svc
+}
+
+// ProvideClaudeCLIVersionSyncService creates ClaudeCLIVersionSyncService, applies
+// whatever version it last synced to the outbound claude-cli identity for THIS
+// process (one-time, at startup — see claude.SetVersionOverride's own contract for
+// why this can't be a live per-request read), then starts its background ticker so
+// future restarts pick up newer releases automatically.
+func ProvideClaudeCLIVersionSyncService(
+	settingRepo SettingRepository,
+	githubClient GitHubReleaseClient,
+) *ClaudeCLIVersionSyncService {
+	svc := NewClaudeCLIVersionSyncService(settingRepo, githubClient, claudeCLIVersionSyncInterval)
+
+	ctx, cancel := context.WithTimeout(context.Background(), claudeCLIVersionSyncTimeout)
+	defer cancel()
+	if synced, err := settingRepo.GetValue(ctx, SettingKeyClaudeCLIClientVersionSynced); err == nil {
+		claude.SetVersionOverride(synced)
+	}
+
 	svc.Start()
 	return svc
 }
@@ -921,6 +943,7 @@ var ProviderSet = wire.NewSet(
 	wire.Bind(new(GrokOAuthReconciler), new(*TokenRefreshService)),
 	ProvideAccountExpiryService,
 	ProvideOpenAICodexVersionSyncService,
+	ProvideClaudeCLIVersionSyncService,
 	ProvideProxyExpiryService,
 	ProvideSubscriptionExpiryService,
 	ProvideTimingWheelService,

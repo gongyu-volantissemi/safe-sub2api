@@ -107,22 +107,29 @@ func FullClaudeCodeMimicryBetas() []string {
 	}
 }
 
-// DefaultHeaders 是 Claude Code 客户端默认请求头。
-var DefaultHeaders = map[string]string{
-	// Keep these in sync with recent Claude CLI traffic to reduce the chance
-	// that Claude Code-scoped OAuth credentials are rejected as "non-CLI" usage.
-	// 版本参考：对齐 Parrot (src/transform/cc_mimicry.py:49) 的 CLI_USER_AGENT。
-	"User-Agent":                                "claude-cli/" + CLIVersion() + " (external, cli)",
-	"X-Stainless-Lang":                          "js",
-	"X-Stainless-Package-Version":               "0.94.0",
-	"X-Stainless-OS":                            "Linux",
-	"X-Stainless-Arch":                          "arm64",
-	"X-Stainless-Runtime":                       "node",
-	"X-Stainless-Runtime-Version":               "v24.3.0",
-	"X-Stainless-Retry-Count":                   "0",
-	"X-Stainless-Timeout":                       "600",
-	"X-App":                                     "cli",
-	"Anthropic-Dangerous-Direct-Browser-Access": "true",
+// DefaultHeaders 返回 Claude Code 客户端默认请求头（每次调用重新构建）。
+//
+// 是函数而不是包级 var：CLIVersion() 的值可能在本包自己的 init 跑完之后，由
+// ClaudeCLIVersionSyncService 在启动阶段通过 SetVersionOverride 再次刷新——若这里
+// 仍是包级 var，字面量会在覆盖生效前就把旧版本号固化进去，与请求体 cc_version
+// 不一致而被上游判为非正版客户端。
+func DefaultHeaders() map[string]string {
+	return map[string]string{
+		// Keep these in sync with recent Claude CLI traffic to reduce the chance
+		// that Claude Code-scoped OAuth credentials are rejected as "non-CLI" usage.
+		// 版本参考：对齐 Parrot (src/transform/cc_mimicry.py:49) 的 CLI_USER_AGENT。
+		"User-Agent":                                "claude-cli/" + CLIVersion() + " (external, cli)",
+		"X-Stainless-Lang":                          "js",
+		"X-Stainless-Package-Version":               "0.94.0",
+		"X-Stainless-OS":                            "Linux",
+		"X-Stainless-Arch":                          "arm64",
+		"X-Stainless-Runtime":                       "node",
+		"X-Stainless-Runtime-Version":               "v24.3.0",
+		"X-Stainless-Retry-Count":                   "0",
+		"X-Stainless-Timeout":                       "600",
+		"X-App":                                     "cli",
+		"Anthropic-Dangerous-Direct-Browser-Access": "true",
+	}
 }
 
 // Model 表示一个 Claude 模型

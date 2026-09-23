@@ -77,3 +77,28 @@ func resolveCLIVersion(raw string) string {
 	}
 	return version
 }
+
+// SetVersionOverride applies an auto-discovered Claude Code CLI version
+// (from ClaudeCLIVersionSyncService's synced setting) on top of the
+// package-init baseline.
+//
+// Must be called at most once, during process startup before any concurrent
+// request handling begins — resolvedCLIVersion's "constant for the process
+// lifetime" contract (see the comment above it) applies here too: this isn't
+// a live/hot-path setter, it's a one-time boot-time adjustment, mirroring how
+// CLIVersionEnv itself is only ever read once at package init.
+//
+// A non-empty, valid CLIVersionEnv always wins: an explicit operator choice
+// is never silently replaced by an auto-discovered value. Call sites resolve
+// that precedence for free by simply calling this after package init, since
+// resolveCLIVersion has already consumed the env var by then.
+func SetVersionOverride(version string) {
+	if strings.TrimSpace(os.Getenv(CLIVersionEnv)) != "" {
+		return
+	}
+	version = strings.TrimSpace(version)
+	if !IsSupportedCLIVersion(version) {
+		return
+	}
+	resolvedCLIVersion = version
+}
